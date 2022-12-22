@@ -3,6 +3,7 @@
 
 import pandas as pd
 import numpy as np
+from io import BytesIO, StringIO
 from sklearn import preprocessing
 
 ########################################################################################
@@ -445,10 +446,11 @@ def distance_similarité( user_id , user_articles , embedding , article_metadata
     # Calcul des similitudes
     _art , _simil = [] , []
     for _user_article in _articles_list :
-        x = _embedding.loc[_user_article,:]
-        for _article in _embedding.index.values :
+        idx = _article_metadata.article_id.values
+        x = _embedding.loc[ idx == _user_article,:].values.ravel()
+        for _article in _article_metadata.article_id.values :
             if _user_article != _article :
-                y = _embedding.loc[_article,:]
+                y = _embedding.loc[idx == _article,:].values.ravel()
                 _art.append( _article )
                 _simil.append( np.linalg.norm(x-y , 2))
     
@@ -514,10 +516,11 @@ def cosinus_similarité( user_id , user_articles , embedding , article_metadata,
     # Calcul des similitudes
     _art , _simil = [] , []
     for _user_article in _articles_list :
-        x = _embedding.loc[_user_article,:]
-        for _article in _embedding.index.values :
+        idx = _article_metadata.article_id.values
+        x = _embedding.loc[ idx == _user_article,:].values.ravel()
+        for _article in _article_metadata.article_id.values :
             if _user_article != _article :
-                y = _embedding.loc[_article,:]
+                y = _embedding.loc[idx == _article,:].values.ravel()
                 _art.append( _article )
                 _simil.append(  np.dot(x,y)/(np.linalg.norm(x,2)*np.linalg.norm(y,2) ) )
     
@@ -565,4 +568,71 @@ def string_to_dataframe( x ) :
 
 ########################################################################################
 
+def blob_stream_to_dataframe_v1(input_blob):
+	"""
+	Description :
+	------------
+		Transforme un flux de donnée InputStream issus d'un point de stockage blob en un DataFrame
+		La version 1 présente parfois quelque erreur et je prefère utiliser la version qui ne m'a pas encore sorti d'erreur
+		
+	Paramètres :
+	-----------
+		input_blob : Blob bidding InputStream de fichier .csv
+		
+	Output : DataFrame
+	-------	
 
+	"""
+    # acquisition des données sous forme de Bytes
+    output = input_blob.read()
+
+    if type(output) == type(b"") :
+        # Conversion de Bytes en Str
+        output = output.decode()
+    
+    # Construction de l'objet StringIO
+    output = StringIO( output)
+
+    return pd.read_csv( output )
+
+
+def blob_stream_to_dataframe_v2(input_blob):
+	"""
+	Description :
+	------------
+		Transforme un flux de donnée InputStream issus d'un point de stockage blob en un DataFrame
+		
+	Paramètres :
+	-----------
+		input_blob : Blob bidding InputStream de fichier .csv
+		
+	Output : DataFrame
+	-------	
+
+	"""
+    output = input_blob.read()
+    output = BytesIO(output)
+    #output.seek(0)
+    return pd.read_csv(output)
+
+def str_bytes_encode_to_dataframe( encode ) :
+	"""
+	Description :
+	------------
+		Converti une chaine de caractère simple ou codé en Bytes en un DataFrame
+		
+	Paramètres :
+	-----------
+		encode : str ou Bytes
+		
+	Output : DataFrame
+	-------
+	"""
+    output = encode
+    if type(output) == str :
+        # Si je reçois une chaine de caractères je transforme en Bytes
+        output = output.encode()
+
+    output = BytesIO(output)
+    #output.seek(0)
+    return pd.read_csv(output)

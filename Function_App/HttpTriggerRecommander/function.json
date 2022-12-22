@@ -1,4 +1,6 @@
-{
+{ 
+  "scriptFile": "__init__.py",
+  "entryPoint": "main",
   "bindings": [
     {
       "authLevel": "anonymous",
@@ -11,9 +13,34 @@
       ]
     },
     {
+      "name": "data",
+      "type": "blob",
+      "path": "dataframes/data.csv",
+      "dataType": "binary",
+      "connection": "recommandationserve9dce_STORAGE",
+      "direction": "in"
+    },
+    {
+      "name": "articleembedding80",
+      "type": "blob",
+      "path": "dataframes/article_embedding_80.csv",
+      "dataType": "binary",
+      "connection": "recommandationserve9dce_STORAGE",
+      "direction": "in"
+    },
+    {
+      "name": "articlesmetadata",
+      "type": "blob",
+      "path": "dataframes/articles_metadata.csv",
+      "dataType": "binary",
+      "connection": "recommandationserve9dce_STORAGE",
+      "direction": "in"
+    },
+    {
       "type": "http",
       "direction": "out",
       "name": "$return"
     }
-  ]
+  ],
+  "disabled": false
 }
