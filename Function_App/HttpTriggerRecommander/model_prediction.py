@@ -92,3 +92,7 @@ def prediction(model, data, articles_metadata, article_embedding_80, user_id, n)
         return cosinus_similarité( user_id, _data, _article_embedding_80, _articles_metadata, n = n ).reset_index(drop=True)[["article_id"]] 	
 
 
+
+
+
+
