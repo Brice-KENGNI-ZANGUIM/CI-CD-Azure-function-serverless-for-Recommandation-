@@ -303,9 +303,13 @@ class SVD:
             - user_id : int
             ---------
             	Identifiant utilisateur
+
+            - anciens_articles : array
+            -------------------
+                liste des anciens articles déjà consultés par l'uitlisateur
             	
         Output : DataFrame
-        --------
+        -------
         	DataFrame des articles recommandés par l'algorithme
             	
         """
