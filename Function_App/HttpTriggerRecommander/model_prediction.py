@@ -36,7 +36,9 @@ def prediction(model, data, articles_metadata, article_embedding_80, user_id, n)
     _data = data.copy()
     _articles_metadata = articles_metadata.copy()
     _article_embedding_80 = article_embedding_80.copy()
-
+    
+    # articles déjà consultés
+    old_user_articles = anciens_articles_utilisateurs( data, articles_metadata, user_id ).article_id.values
 
     if "Cb" == model :
 
@@ -50,8 +52,8 @@ def prediction(model, data, articles_metadata, article_embedding_80, user_id, n)
         #########    Génération des recommandation d'article et ajout à la liste des recommandations      #########
         ###########################################################################################################
         return content_base_recommandation_par_utilisateur( 
-                                                            user_id , _user_rating_categ , _articles_metadata, n 
-                                                            ).reset_index(drop=True)[["article_id"]] 
+                                                            user_id , _user_rating_categ , _articles_metadata, n, old_user_articles 
+                                                            )#.reset_index(drop=True)[["article_id"]] 
 
     elif "Svd" == model :
         ###########################################################################
@@ -77,7 +79,7 @@ def prediction(model, data, articles_metadata, article_embedding_80, user_id, n)
         ###########################################################################################################
         #########    Génération des recommandation d'article et ajout à la liste des recommandations      #########
         ###########################################################################################################
-        return svd.recommend( user_id = user_id, n = n).reset_index(drop=True)[["article_id"]]
+        return svd.recommend( user_id = user_id, n = n, anciens_articles = old_user_articles).reset_index(drop=True)#[["article_id"]]
 
     elif "Distance" == model :
 
@@ -90,9 +92,4 @@ def prediction(model, data, articles_metadata, article_embedding_80, user_id, n)
         #########    Génération des recommandation d'article et ajout à la liste des recommandations      #########
         ###########################################################################################################
         return cosinus_similarité( user_id, _data, _article_embedding_80, _articles_metadata, n = n ).reset_index(drop=True)[["article_id"]] 	
-
-
-
-
-
 

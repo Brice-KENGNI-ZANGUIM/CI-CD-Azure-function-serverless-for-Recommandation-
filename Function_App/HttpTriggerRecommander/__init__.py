@@ -37,6 +37,7 @@ def main (  req: func.HttpRequest,
     #########################################################################
     #########      Conversion des données Stream en DataFrame      ##########
     #########################################################################
+    #return func.HttpResponse( data.read() )
     #return func.HttpResponse( f"data  {len(data.read( ))} - articleembedding80  {len(articleembedding80.read( ))} - articlesmetadata  {len(articlesmetadata.read( ))}" )
     articles_metadata = blob_stream_to_dataframe_v2( articlesmetadata )
     article_embedding_80 =  blob_stream_to_dataframe_v2( articleembedding80 )
@@ -119,4 +120,3 @@ def main (  req: func.HttpRequest,
                                 "Cette fonction s'exécute très bien. vous pouvez passez des paramètres en requête",
                                 status_code=200
                                 )
-

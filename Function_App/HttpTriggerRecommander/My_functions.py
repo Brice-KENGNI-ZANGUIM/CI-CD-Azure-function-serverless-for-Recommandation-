@@ -9,7 +9,7 @@ from sklearn import preprocessing
 ########################################################################################
 ##########    Recommandation d'articles selon le modèle content-based      #############
 ########################################################################################
-def content_base_recommandation_par_utilisateur( user_id, rating_list, articles_list, n= 6 ) :
+def content_base_recommandation_par_utilisateur( user_id, rating_list, articles_list, n, anciens_articles ) :
     """
     Description :
     -------------
@@ -34,6 +34,10 @@ def content_base_recommandation_par_utilisateur( user_id, rating_list, articles_
         - n : int
         ----
             Nombre de livres à recommander
+
+        - anciens_articles : array
+        -------------------
+            liste des anciens articles déjà consultés par l'uitlisateur
             
     Output :  DataFrame 
     ---------
@@ -47,7 +51,7 @@ def content_base_recommandation_par_utilisateur( user_id, rating_list, articles_
     
     #  liste des ratings pour chaque catégories pour l'utilisateur
     _user_rating = _rating_list.loc[_rating_list.user_id == _user_id,"Rating"].values[0]
-    
+
     #  liste des catégories de livres  pour l'utilisateur
     _user_categorys = _rating_list.loc[_rating_list.user_id == _user_id, "category_id"].values[0]
     
@@ -62,12 +66,17 @@ def content_base_recommandation_par_utilisateur( user_id, rating_list, articles_
     
     # Tris dans l'ordre décroissant des notes de chaque livre
     _articles_list = _articles_list.sort_values(by= ["Rating"], ascending = False)
+
+    # Suppression des articles déjà consultés par l'uilisateur dans la liste des articles à recommander
+    _articles_list = _articles_list.loc[ _articles_list.article_id.apply( lambda x : x not in anciens_articles ).values ,:]
+
+    # limitation du nombre de recommandation
     _articles_list = _articles_list.iloc[:n, : ]
     
     # duplicatats
     _articles_list.drop_duplicates("article_id", keep = "first", inplace = True, ignore_index=True)
     
-    return _articles_list[["article_id","category_id", "Rating"]]
+    return _articles_list[["article_id"]] #_articles_list[["article_id","category_id", "Rating"]]
 
 
 ########################################################################################
@@ -214,6 +223,8 @@ class SVD:
         # init users and items latent factors
         self.u_factors = np.array([])
         self.i_factors = np.array([])
+
+        
     	
     def fit(self, R):
         """
@@ -280,7 +291,7 @@ class SVD:
         return r_hat
         
     
-    def recommend(self, user_id, n = 10):
+    def recommend(self, user_id, n , anciens_articles):
         """
         
         Description :
@@ -306,19 +317,23 @@ class SVD:
         predictions = np.dot(self.u_factors[u,:], self.i_factors) + self.umean[u]
         
         # sort item ids in decreasing order of predictions
-        top_idx = np.flip(np.argsort(predictions))[:n]
+        top_idx = np.flip(np.argsort(predictions))
 
         # decode indices to get their corresponding itemids
-        top_items = self.items_encodeur.inverse_transform(top_idx)
+        top_items = np.array( self.items_encodeur.inverse_transform(top_idx) )
         
+        # Suppression des articles déjà consultés par l'utilisateur
+        filtre = np.vectorize( lambda x : x not in anciens_articles )
+        top_items = top_items[ filtre( top_items ) ]
+
         # recherche les catégories correspondantes aux articles
-        top_categs = [ self.metadata[self.metadata.article_id == art].category_id.values[0] for art in top_items ]
+        #top_categs = [ self.metadata[self.metadata.article_id == art].category_id.values[0] for art in top_items ]
         
         # Ratings rangés par ordre décroissant
-        preds = np.round( predictions[top_idx] , 4)
+        #preds = np.round( predictions[top_idx] , 4)
         
         #return pd.DataFrame({"article_id":top_items, "category_id": top_categs, "Rating":preds })
-        return pd.DataFrame({"article_id":top_items, "category_id": top_categs, "Rating":preds })
+        return pd.DataFrame({ "article_id":top_items }).loc[:n-1,:]#pd.DataFrame({"article_id":top_items, "category_id": top_categs, "Rating":preds }).loc[:n,:]
 
 
 ##########################################################################################
@@ -357,7 +372,6 @@ def build_rating( data, label ) :
         _data.Rating = _data.Rating.values * np.round(np.log10( 3 + _data_0.words_count.values/600 ),4)
     
     return  _data
-
 
 
 ######################################################################################
@@ -569,23 +583,22 @@ def string_to_dataframe( x ) :
 ########################################################################################
 
 def blob_stream_to_dataframe_v1(input_blob):
-	"""
-	Description :
-	------------
-		Transforme un flux de donnée InputStream issus d'un point de stockage blob en un DataFrame
-		La version 1 présente parfois quelque erreur et je prefère utiliser la version qui ne m'a pas encore sorti d'erreur
-		
-	Paramètres :
-	-----------
-		input_blob : Blob bidding InputStream de fichier .csv
-		
-	Output : DataFrame
-	-------	
+    """
+    Description :
+    ------------
+        Transforme un flux de donnée InputStream issus d'un point de stockage blob en un DataFrame
+        La version 1 présente parfois quelque erreur et je prefère utiliser la version qui ne m'a pas encore sorti d'erreur
 
-	"""
+    Paramètres :
+    -----------
+        input_blob : Blob bidding InputStream de fichier .csv
+        
+    Output : DataFrame
+    -------	
+
+    """
     # acquisition des données sous forme de Bytes
     output = input_blob.read()
-
     if type(output) == type(b"") :
         # Conversion de Bytes en Str
         output = output.decode()
@@ -597,37 +610,37 @@ def blob_stream_to_dataframe_v1(input_blob):
 
 
 def blob_stream_to_dataframe_v2(input_blob):
-	"""
-	Description :
-	------------
-		Transforme un flux de donnée InputStream issus d'un point de stockage blob en un DataFrame
-		
-	Paramètres :
-	-----------
-		input_blob : Blob bidding InputStream de fichier .csv
-		
-	Output : DataFrame
-	-------	
+    """
+    Description :
+    ------------
+        Transforme un flux de donnée InputStream issus d'un point de stockage blob en un DataFrame
+        
+    Paramètres :
+    -----------
+        input_blob : Blob bidding InputStream de fichier .csv
+        
+    Output : DataFrame
+    -------	
 
-	"""
+    """
     output = input_blob.read()
     output = BytesIO(output)
     #output.seek(0)
     return pd.read_csv(output)
 
 def str_bytes_encode_to_dataframe( encode ) :
-	"""
-	Description :
-	------------
-		Converti une chaine de caractère simple ou codé en Bytes en un DataFrame
-		
-	Paramètres :
-	-----------
-		encode : str ou Bytes
-		
-	Output : DataFrame
-	-------
-	"""
+    """
+    Description :
+    ------------
+        Converti une chaine de caractère simple ou codé en Bytes en un DataFrame
+        
+    Paramètres :
+    -----------
+        encode : str ou Bytes
+        
+    Output : DataFrame
+    -------
+    """
     output = encode
     if type(output) == str :
         # Si je reçois une chaine de caractères je transforme en Bytes
